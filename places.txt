@@ -1,2 +1,6 @@
 granada
 cadiz
+sevilla
+malaga
+jaen
+cordoba
