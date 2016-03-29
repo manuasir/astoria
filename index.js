@@ -8,15 +8,6 @@ var places=[];
 var resultados=[];
 var BigNumber = require('big-number');
 
-function calculaMedia(res){
-    console.log("calculando media, el tamaño de res es "+ res.length);
-    for (var i = 0; i < res.length; i++) {
-        res[i]=BigNumber(res[i]).div(50);
-        //console.log(res[i]);
-    }
-    return res;
-}
-
 function peticion(lugar,url,callback){
     request({
     url: url,
@@ -37,12 +28,11 @@ function peticion(lugar,url,callback){
             resp.forEach(function(item){
                 if(item.size!=''){
                     medias+=Math.round((item.price)/(item.size));
-
                 }
 
             });
             resultados[lugar]=medias;
-            console.log("lugar-> "+lugar+" resultados[lugar] "+resultados[lugar]);
+            //console.log("lugar-> "+lugar+" resultados[lugar] "+resultados[lugar]);
             }
       
             callback(resultados);
@@ -66,18 +56,24 @@ lr.on('end', function () {
 
     async.each(places,function(item){
         var escaped_str = require('querystring').escape(item);
-        console.log(item);
+        //console.log(item);
         var index=1;
-        while(index<=5){  
-            var url = "http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page="+index+"&place_name="+escaped_str+"&pretty=1&number_of_results=50";
+        while(index<=5){
+                    var url = "http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page="+index+"&place_name="+escaped_str+"&pretty=1&number_of_results=50";
                     peticion(item,url,function(resu){
-                        
-                        acabose=calculaMedia(resu);
+                        console.log(resultados[item]);
+                        resultados[item]=resultados[item]/50;
+                        console.log("resultado -> "+item+" "+resultados[item] );
+                        //acabose=calculaMedia(resu);
 
                     });
            index++;
         }
-    },function(err){console.log("final");} );
+       
+    },function(err){
+
+        console.log(err);
+    });
         
 });
 
