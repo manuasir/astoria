@@ -8,6 +8,8 @@ var places=[];
 var resultados=[];
 var BigNumber = require('big-number');
 var acabose=[];
+var Promise = require('bluebird');
+
 function peticion(lugar,url,callback){
     request({
         url: url,
@@ -66,19 +68,21 @@ lr.on('end', function () {
                         //console.log("peticion "+index);
                       //  console.log(resultados[item]);
                         resultados[item]+=resu[item]/50;
-                        //console.log("resultado -> "+item+" "+resultados[item] );
+                     //   console.log("resultado -> "+item+" "+resultados[item] );
                         //resultados[item]+=
                         //acabose=calculaMedia(resu);
                         
                     });
-        resultados[item]=resultados[item]/10;
-        acabose[item]=resultados[item];
+       
         index++;
         }
         console.log(acabose[item]+" - "+item);
       // console.log("saliendo while");
     },function(err){
         console.log(err);
+         resultados[item]=resultados[item]/10;
+        acabose[item]=resultados[item];
+       // console.log(acabose[item]);
     });     
 });
 
