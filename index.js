@@ -2,19 +2,19 @@
 
 var request = require("request");
 var LineByLineReader = require('line-by-line');
-var lr = new LineByLineReader('places.txt');
-var async = require("async");
+var sqlite3 = require('sqlite3').verbose();
+var db = new sqlite3.Database('../nestoria.db');
 var places=[];
-var resultados=[];
-var BigNumber = require('big-number');
-var acabose=[];
-var Promise = require('bluebird');
 
-function peticion(lugar,url,callback){
+var check;
+
+
+
+
+function peticion(lugar,url){
     request({
         url: url,
         headers: {
-        //'Content-Length': contentLength,
         'Content-Type': 'application/x-www-form-urlencoded',
         'User-Agent' : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:24.0) Gecko/20100101 Firefox/24.0'
         },
@@ -27,63 +27,66 @@ function peticion(lugar,url,callback){
             var fin;
           
            if(resp){
-            async.each(resp,function(item){
+            resp.forEach(function(item){
                 if(item.size!=''){
-                    medias+=Math.round((item.price)/(item.size));
+                    //console.log("insertando...");
+                     db.run("INSERT INTO casas(guid) VALUES (item)");
                 }
 
             });
-            resultados[lugar]=medias;
-            //console.log("lugar-> "+lugar+" resultados[lugar] "+resultados[lugar]);
+          
             }
-      
-            return callback(resultados);
+            else{
+                console.log("no hay datos");
+            }
     }
     else
             console.log(error);
     });
-    
 }
 
-lr.on('error', function (err) {
-    console.log("error al leer el documento de texto");
-});
+function handleFile(file,callback){
+    var lr = new LineByLineReader(file);
 
-lr.on('line', function (line) {
-    places.push(line);
-    resultados[line]=0;
-});
+    lr.on('error', function (err) {
+        console.log("error al leer el documento de texto");
+    });
 
-lr.on('end', function () {
+    lr.on('line', function (line) {
+        places.push(line);
+        //places[line]=line;
+    });
 
-    async.each(places,function(item){
+    lr.on('end', function () {
+        console.log("fin del documento");
+        return callback();
+    });
+}
+
+function procesa(){
+    console.log("procesando...");
+    places.forEach(function(item){
         var escaped_str = require('querystring').escape(item);
-        //console.log(item);
-        var index=1;
-        //console.log("entrando while");
-        while(index<=10){
-           // console.log("he entrado en while");
-                    var url = "http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page="+index+"&place_name="+escaped_str+"&pretty=1&number_of_results=100";
-                    peticion(item,url,function(resu){
-                        //console.log("peticion "+index);
-                      //  console.log(resultados[item]);
-                        resultados[item]+=resu[item]/50;
-                     //   console.log("resultado -> "+item+" "+resultados[item] );
-                        //resultados[item]+=
-                        //acabose=calculaMedia(resu);
-                        
-                    });
-       
-        index++;
-        }
-        console.log(acabose[item]+" - "+item);
-      // console.log("saliendo while");
-    },function(err){
-        console.log(err);
-         resultados[item]=resultados[item]/10;
-        acabose[item]=resultados[item];
-       // console.log(acabose[item]);
-    });     
-});
 
+        var index=1;
+
+        //while(index<=10){
+            //console.log("while");
+            var url = "http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page="+index+"&place_name="+escaped_str+"&pretty=1&number_of_results=100";
+            peticion(item,url);
+         
+            //index++;
+       // }
+         
+
+    },function(err,callback){
+        console.log("FIN");
+
+    });
+ 
+}
+
+handleFile('places.txt',function(){
+    procesa();
+});
 
