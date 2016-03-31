@@ -8,10 +8,8 @@ var places=[];
 
 var check;
 
-
-
-
-function peticion(lugar,url){
+function peticion(lugar,url,callback){
+    
     request({
         url: url,
         headers: {
@@ -20,29 +18,35 @@ function peticion(lugar,url){
         },
         port: 80,
         json: true
-    }, function (error, response, body) {
-    if (!error) {
+        }, function (error, response, body) {
+        if (!error) {
             var sum=0,medias=0;
-            var resp=body.response.listings;
+            var respuesta=body.response;
             var fin;
-          
-           if(resp){
-            resp.forEach(function(item){
-                if(item.size!=''){
-                    //console.log("insertando...");
-                     db.run("INSERT INTO casas(guid) VALUES (item)");
+            if(respuesta){
+                var resp=respuesta.listings;
+                if(resp){
+                resp.forEach(function(item){
+                    if(item.size!=''){
+                        db.serialize(function() {
+                            var stmt = db.prepare("INSERT INTO casas VALUES (?,?,?,?,?,?,?)");
+                            console.log(item.guid,item.price,item.size,item.longitude,item.latitude,item.property_type);
+                            stmt.run(item.guid,item.price,item.size,item.longitude,item.latitude,item.title,item.property_type);
+                            stmt.finalize();
+                        });
+                    }
+                });
                 }
-
-            });
-          
             }
-            else{
-                console.log("no hay datos");
+        }
+        else{
+                //console.log("errorcillo ->"+error);
+                //setTimeout(function(){},10);
+                return callback(error);
             }
-    }
-    else
-            console.log(error);
+    
     });
+return callback();
 }
 
 function handleFile(file,callback){
@@ -67,23 +71,22 @@ function procesa(){
     console.log("procesando...");
     places.forEach(function(item){
         var escaped_str = require('querystring').escape(item);
-
+        var err=false;
         var index=1;
+        
+        while(index<=20 && !err){
+            var url = "http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page="+index+"&place_name="+escaped_str+"&pretty=1&number_of_results=50";
+            peticion(item,url,function(error){
+                index++;
+                if(error){
+                    err=true;
+                    console.log("error en callback "+error);
+                }
+            });
+        }
+    },function(){
 
-        //while(index<=10){
-            //console.log("while");
-            var url = "http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page="+index+"&place_name="+escaped_str+"&pretty=1&number_of_results=100";
-            peticion(item,url);
-         
-            //index++;
-       // }
-         
-
-    },function(err,callback){
-        console.log("FIN");
-
-    });
- 
+    }
 }
 
 handleFile('places.txt',function(){
