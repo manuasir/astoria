@@ -8,24 +8,14 @@ var places=[];
 var async = require('async');
 var check;
 
-
-
-function peticionAsincrona(url,salida,callback){
-    console.log("PETICION ASINCRONA");
-async.parallel([
-function(callback){
-    peticion(url,salida,function(){
-        callback();
-    });
-}
-    ]);
-console.log("FIN PETICION ASINCRONA");
-}
+var index;
+var cpaginacion=1
 
 
 
-function peticion(url,salida,callback){
 
+
+function peticion(url,str,i,c){
    
     
     request({
@@ -36,9 +26,11 @@ function peticion(url,salida,callback){
         },
         port: 80,
         json: true
-        }, function (error, response,body,callback) {
-            console.log("peticion");
+        }, function (error, response,body) {
+            
+            
         if (!error) {
+            console.log("procesando. i: "+i+" c: "+c);
             //console.log("callback");
             var sum=0,medias=0;
             var respuesta=body.response;
@@ -49,33 +41,38 @@ function peticion(url,salida,callback){
                 async.each(resp,function(item){
                     console.log("introduciendo en bd");
                     if(item.size!=''){
-                        db.serialize(function() {
-                            var stmt = db.prepare("INSERT INTO casas VALUES (?,?,?,?,?,?,?)");
-                            console.log(item.guid,item.price,item.size,item.longitude,item.latitude,item.property_type);
-                            stmt.run(item.guid,item.price,item.size,item.longitude,item.latitude,item.title,item.property_type);
-                            stmt.finalize();
-                        });
+                        // db.serialize(function() {
+                        //     var stmt = db.prepare("INSERT INTO casas VALUES (?,?,?,?,?,?,?)");
+                        //     console.log(item.guid,item.price,item.size,item.longitude,item.latitude,item.property_type);
+                        //     stmt.run(item.guid,item.price,item.size,item.longitude,item.latitude,item.title,item.property_type);
+                        //     stmt.finalize();
+                        // });
                         //callback();
                     }
                 },function(){
                     console.log("OTRA PAGINA");
-                    callback();
+                    //callback();
                 });
                 }
-                //callback();
+              
             }
-            //callback();
+        
         }
         else{
                 console.log("error ->"+error);
-                //setTimeout(function(){},10);
-                callback(error);
+              
             }
     
+    
+    
+
+    c++;
+    console.log("fin peticion "+c);
+    paginar(str,i,c);
     });
 //return callback();
 
-console.log("fin peticion");
+
 }
 
 function handleFile(file,callback){
@@ -96,10 +93,21 @@ function handleFile(file,callback){
     });
 }
 
-
-function procesa(){
+function procesa(i){
     console.log("procesando...");
-    async.each(places,function(item,next1){
+    if(i<places.length){
+    var item=places[i];
+    console.log("un sitio: "+item);
+        var escaped_str = require('querystring').escape(item);
+        var err=false;
+        var index=1;
+        paginar(escaped_str,i, cpaginacion);
+    }
+    else{
+        console.log("fin de pueblos");
+    }
+    /*
+    async.forEach(places,function(item,next1){
         console.log("un sitio: "+item);
         var escaped_str = require('querystring').escape(item);
         var err=false;
@@ -110,28 +118,37 @@ function procesa(){
     },function(){
         console.log("municipios terminados");
     });
+*/
+
 }
 
 
-function paginar(escaped_str,next2){
+function paginar(escaped_str,i, cpaginacion){
 
 
-async.times(20, function(n, next2){
-    var url = "http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page="+n+"&place_name="+escaped_str+"&pretty=1&number_of_results=50";
-    console.log("pagina-> "+n+" sitio: "+escaped_str);
-    paginaUnaVez(url,next2);
-    }, function(err, users) {
-         console.log("fin de paginas");
-    });
+//async.times(20, function(n, next2){
+    var url = "http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page="+cpaginacion+"&place_name="+escaped_str+"&pretty=1&number_of_results=50";
+    console.log(url);
+    console.log("pagina-> "+cpaginacion+" sitio: "+escaped_str);
+   // peticion(url,next2);
+  //  }, function(err, users) {
+    //     console.log("fin de paginas");
+    if(cpaginacion==20){
+        i++;
+        procesa(i);
+    }else {
+        peticion(url, escaped_str,i, cpaginacion);
+    }
+   // });
 }
 
-function paginaUnaVez(url, next3){
-   console.log("enviando peticion...");
-    peticion(url,function(){
-        next3();
-    });
-}
+// function paginaUnaVez(url, next3){
+//    console.log("enviando peticion...");
+//     peticion(url,next3);
+// }
 
 handleFile('places.txt',function(){
-    procesa();
+    index=0;
+    procesa(index);
 });
+
