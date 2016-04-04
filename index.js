@@ -1,5 +1,5 @@
 // Manuel Jiménez Bernal - Iliberi S.A. Granada 2016
-
+var str2json = require('string-to-json');
 var request = require("request");
 var LineByLineReader = require('line-by-line');
 var sqlite3 = require('sqlite3').verbose();
@@ -7,16 +7,31 @@ var db = new sqlite3.Database('../nestoria.db');
 var places=[];
 var async = require('async');
 var check;
-
 var index;
-var cpaginacion=1
+var cpaginacion=0;
 
+function insertData(guid,price,size,longitude,latitude,text,property_type,callback){
+ db.serialize(function() {
+  var stmt = db.prepare("INSERT INTO casas VALUES (?,?,?,?,?,?,?)");
+  stmt.run(guid,price,size,longitude,latitude,text,property_type);
+ },function(){
+    console.log("fin transaccion");
+    callback();
+ });
+}
 
-
-
+function insertDataSec(guid,longitude,latitude,callback){
+ db.serialize(function() {
+  var stmt = db.prepare("INSERT INTO casas(guid,longitude,latitude) VALUES (?,?,?)");
+  stmt.run(guid,longitude,latitude);
+ },function(){
+    console.log("fin transaccion");
+    callback();
+ });
+}
 
 function peticion(url,str,i,c){
-   console.log("relizando nueva peticion.........."+c);
+   //console.log("realizando nueva peticion.........."+c);
     
     request({
         url: url,
@@ -28,9 +43,8 @@ function peticion(url,str,i,c){
         json: true
         }, function (error, response,body) {
             
-            
         if (!error) {
-            console.log("procesando. sitio: "+places[i]+" pagina: "+c);
+            
             //console.log("callback");
             var sum=0,medias=0;
             var respuesta=body.response;
@@ -38,24 +52,84 @@ function peticion(url,str,i,c){
             if(respuesta){
                 var resp=respuesta.listings;
                 if(resp){
-                resp.forEach(function(item){
-                    
+                resp.forEach(function(item,next){
+                var remaining = resp.length;
                     if(item.size!=''){
-                        //console.log("introduciendo en bd");
-                        // db.serialize(function() {
-                        //     var stmt = db.prepare("INSERT INTO casas VALUES (?,?,?,?,?,?,?)");
-                             console.log(item.price,item.size,item.longitude,item.latitude,item.property_type);
-                        //     stmt.run(item.guid,item.price,item.size,item.longitude,item.latitude,item.title,item.property_type);
-                        //     stmt.finalize();
-                        // });
-                        //callback();
+                        insertData(item.guid,item.size,item.price,item.longitude,item.latitude,item.title,item.property_type,function(){                    
+                            if (!--remaining){ //console.log("nueva entrada"); 
+                                next();
+                            }
+                        });
+                    }
+                    
+                });
+                //console.log("fin peticion "+c);
+                        c++;
+                        paginar(str,i,c,false);
+                }
+                else{
+                    //console.log("NO RESP");
+                    paginar(str,i,c,true);
+                }
+              
+            }
+            else{
+                //console.log("no hay datos");
+            }
+        }
+        else{
+                console.log("error!!!!!!! ->"+error+ " volviendo a hacer la peticion "+c);
+                paginar(str,i,c,true);
+              
+            }
+        
+           
+        
+        });
+}
 
+function peticion2(url,str,i,c){
+   //console.log("realizando nueva peticion.........."+c);
+    
+    request({
+        url: url,
+        headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent' : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:24.0) Gecko/20100101 Firefox/24.0'
+        },
+        port: 80,
+        json: true
+        }, function (error, response,body) {
+            
+        if (!error) {
+            
+            //console.log("callback");
+            var sum=0,medias=0;
+            var respuesta=body;
+            var fin;
+            if(respuesta){
+               // var resp=JSON.stringify(respuesta);
+                var resp = str2json.convert(respuesta);
+                console.log(resp);
+                if(resp){
+                resp.forEach(function(item,next){
+                var remaining = resp.length;
+                    if(item.size!=''){
+                        insertData(item.guid,item.size,item.price,item.longitude,item.latitude,item.title,item.property_type,function(){                    
+                            if (!--remaining){ //console.log("nueva entrada"); 
+                                next();
+                            }
+                        });
                     }
                     
                 });
                 console.log("fin peticion "+c);
                         c++;
                         paginar(str,i,c,false);
+                }
+                else{
+                    console.log("NO RESP");
+                    paginar(str,i,c,true);
                 }
               
             }
@@ -72,12 +146,68 @@ function peticion(url,str,i,c){
            
         
         });
+}
 
+function secondreq(url,str,i,c){
+    request({
+        url: url,
+        headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent' : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:24.0) Gecko/20100101 Firefox/24.0'
+        },
+        port: 80,
+        json: true
+        }, function (error, response,body) {
+            if(!error){
+                if(response){
+                    if(body){
+                        //var resp=body.response;
+                       // var respuesta = JSON.parse();
+                        //body.forEach(function(item){
+                        var vector=[];
+                        // for (var i = 1; i <= 100 ;i++ ) {
+                        //     vector.push(i);
+                        // }
+                        var salida=false;
+                        //async.forEach(vector,function(i,next){
+                            var i=1;
+                            if(body[i]){
+                                console.log(i+"  "+body[i].guid);
+                             // insertDataSec(body[i].guid,body[i].location.lon,body[i].location.lat,function(){
+                             //     next();
+                             // });
+                            }
+                            else if(!body[i] && i<99){
+                                console.log("me salgo con errores");
+                                paginar(str,i,c,true);
+                                //return;
+                            }
+                      //  });
+                        console.log("fin bucle");
+                       // console.log(body[2].guid);
+                        //});
+                        
+                            console.log("salida sin errores");
+                            c+=100;
+                            paginar(str,i,c,false);
+                        
+                    }
+                    else{
+                     console.log("no body");
+                    }
+                }
+                else{
+                console.log("no response");
+                }
+            }
+            else{
+                console.log("error");
+            }
+        });
 }
 
 function handleFile(file,callback){
     var lr = new LineByLineReader(file);
-
     lr.on('error', function (err) {
         console.log("error al leer el documento de texto");
     });
@@ -97,59 +227,38 @@ function procesa(i){
     //console.log("procesando...");
     if(i<places.length){
     var item=places[i];
-    //console.log("un sitio: "+item);
+    console.log("un sitio: "+item);
         var escaped_str = require('querystring').escape(item);
         var err=false;
         var index=1;
+        cpaginacion=1;
         paginar(escaped_str,i, cpaginacion,false);
     }
     else{
         console.log("fin de pueblos");
     }
-    /*
-    async.forEach(places,function(item,next1){
-        console.log("un sitio: "+item);
-        var escaped_str = require('querystring').escape(item);
-        var err=false;
-        var index=1;
-        paginar(escaped_str,next1);
-        
-        
-    },function(){
-        console.log("municipios terminados");
-    });
-*/
-
 }
 
 
 function paginar(escaped_str,i, cpaginacion,error){
 
-
-//async.times(20, function(n, next2){
+    //console.log("entro en paginar. cpaginacion= "+cpaginacion+" error "+error);
     var url = "http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page="+cpaginacion+"&place_name="+escaped_str+"&pretty=1&number_of_results=50";
     var ukurl = "http://api.nestoria.co.uk/api?action=search_listings&country=uk&encoding=json&listing_type=buy&page="+cpaginacion+"&place_name="+escaped_str+"&pretty=1&number_of_results=50";
-   
-   // console.log(url);
-    //console.log("pagina-> "+cpaginacion+" sitio: "+escaped_str);
-   // peticion(url,next2);
-  //  }, function(err, users) {
-    //     console.log("fin de paginas");
-    if(cpaginacion==20 && !error){
+    var securl = "http://172.17.4.14/nestoria.php?location="+escaped_str+"&listing_type=buy&property_type=property&offset="+cpaginacion;
+    if(cpaginacion==21 || error){
+        console.log("terminado sitio: "+escaped_str+" paginas: "+cpaginacion);
         i++;
         procesa(i);
-    }else {
-        peticion(ukurl, escaped_str,i, cpaginacion);
+    }else{
+        console.log("no he llegado al fin de paginas,hago otra peticion "+cpaginacion);
+       // peticion(url, escaped_str,i, cpaginacion);
+        peticion2(securl, escaped_str,i, cpaginacion);
+
     }
-   // });
 }
 
-// function paginaUnaVez(url, next3){
-//    console.log("enviando peticion...");
-//     peticion(url,next3);
-// }
-
-handleFile('placesuk.txt',function(){
+handleFile('places.txt',function(){
     index=0;
     procesa(index);
 });
