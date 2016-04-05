@@ -118,7 +118,7 @@ function peticion2(url,str,i,c){
                 //var resp = str2json.convert(respuesta);
                 var resp=JSON.parse(respuesta);
                // console.log(resp);
-                if(resp){
+                if(resp.total>0){
                     //console.log("resp->"+resp);
                    // console.log("tipo ->"+Object.prototype.toString.call(resp));
                 //resp.forEach(function(item,next){
@@ -148,71 +148,14 @@ function peticion2(url,str,i,c){
             }
             else{
                 console.log("no hay datos");
+                paginarsec(str,i,c,true);
             }
         }
         else{
                 console.log("error!!!!!!! ->"+error+ " volviendo a hacer la peticion "+c);
-                paginarsec(str,i,c,true);            
+                paginarsec(str,i,c,true);
             }
 
-        });
-}
-
-function secondreq(url,str,i,c){
-    request({
-        url: url,
-        headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent' : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:24.0) Gecko/20100101 Firefox/24.0'
-        },
-        port: 80,
-        json: true
-        }, function (error, response,body) {
-            if(!error){
-                if(response){
-                    if(body){
-                        //var resp=body.response;
-                       // var respuesta = JSON.parse();
-                        //body.forEach(function(item){
-                        var vector=[];
-                        // for (var i = 1; i <= 100 ;i++ ) {
-                        //     vector.push(i);
-                        // }
-                        var salida=false;
-                        //async.forEach(vector,function(i,next){
-                            var i=1;
-                            if(body[i]){
-                                //console.log(i+"  "+body[i].guid);
-                              insertDataSec(body[i].guid,body[i].location.lon,body[i].location.lat,function(){
-                                 next();
-                              });
-                            }
-                            else if(!body[i] && i<99){
-                                console.log("me salgo con errores");
-                                paginar(str,i,c,true);
-                                //return;
-                            }
-                      //  });
-                        console.log("fin bucle");
-                       // console.log(body[2].guid);
-                        //});
-                        
-                            console.log("salida sin errores");
-                            c+=100;
-                            paginar(str,i,c,false);
-                        
-                    }
-                    else{
-                     console.log("no body");
-                    }
-                }
-                else{
-                console.log("no response");
-                }
-            }
-            else{
-                console.log("error");
-            }
         });
 }
 
@@ -273,16 +216,14 @@ function procesa(i){
             //peticion2();
         }
         break;
-    }
-    
+    } 
 }
-
 
 function paginar(escaped_str,i, cpaginacion,error){
 
     //console.log("entro en paginar. cpaginacion= "+cpaginacion+" error "+error);
     var url = "http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page="+cpaginacion+"&place_name="+escaped_str+"&pretty=1&number_of_results=50";
-    var ukurl = "http://api.nestoria.co.uk/api?action=search_listings&country=uk&encoding=json&listing_type=buy&page="+cpaginacion+"&place_name="+escaped_str+"&pretty=1&number_of_results=50";
+    //var ukurl = "http://api.nestoria.co.uk/api?action=search_listings&country=uk&encoding=json&listing_type=buy&page="+cpaginacion+"&place_name="+escaped_str+"&pretty=1&number_of_results=50";
    // var securl = "http://172.17.4.14/nestoria.php?location="+escaped_str+"&listing_type=buy&property_type=property&offset="+cpaginacion;
     if(cpaginacion==21 || error){
         console.log("terminado sitio: "+escaped_str+" paginas: "+cpaginacion);
@@ -295,6 +236,7 @@ function paginar(escaped_str,i, cpaginacion,error){
 
     }
 }
+
 function paginarsec(escaped_str,i, cpaginacion,error){
 
     //console.log("entro en paginar. cpaginacion= "+cpaginacion+" error "+error);
