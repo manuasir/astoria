@@ -1,15 +1,21 @@
 
+//Astoria - Manuel J. Bernal, Iliberi S.A. Granada 2016
+
+//Dependencias:
+
 var request = require("request");
 var LineByLineReader = require('line-by-line');
 var sqlite3 = require('sqlite3').verbose();
 var db = new sqlite3.Database('../nestoria.db');
-var places=[];
 var async = require('async');
+
+// Variables globales:
+
 var check;
 var index;
 var cpaginacion=1;
 var cambio=false;
-var contador=0;
+var places=[];
 
 function insertData(c,price,size,longitude,latitude,property_type,callback){
     db.serialize(function() {
@@ -68,7 +74,6 @@ function peticion(url,str,i,c){
 
         });
 }
-
 
 function handleFile(file,callback){
     var lr = new LineByLineReader(file);
