@@ -1,0 +1,25 @@
+{
+  "name": "astoria",
+  "version": "1.0.0",
+  "description": "Manuel J. Bernal # astoria Use Nestoria API with Node.JS Read places from a file and send request to Nestoria API to extract information such price,price and geo information(latitude,longitude). Info is saved in sqlite3 database.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/manuasir/astoria.git"
+  },
+  "author": "Manuel J. Bernal",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/manuasir/astoria/issues"
+  },
+  "homepage": "https://github.com/manuasir/astoria#readme",
+  "dependencies": {
+    "async": "^2.5.0",
+    "line-by-line": "^0.1.5",
+    "mongoose": "^4.11.10",
+    "request": "^2.81.0"  }
+}
