@@ -3,30 +3,26 @@
 
 //Dependencias:
 
-var request = require("request");
-var LineByLineReader = require('line-by-line');
-var sqlite3 = require('sqlite3').verbose();
-var db = new sqlite3.Database('../nestoria.db');
-var async = require('async');
-
+const request = require("request");
+const LineByLineReader = require('line-by-line');
+const mongoose = require('mongoose');
+const async = require('async');
+const str = require('querystring');
+let House = require('./models/houses');
 // Variables globales:
+let places=[];
 
-var check;
-var index;
-var cpaginacion=1;
-var cambio=false;
-var places=[];
+// conexión con DB
+mongoose.connect('mongodb://manuasir:mongodb@ds147072.mlab.com:47072/heroku_mctx4f0c',{useMongoClient:true});
+//mongoose.connect('mongodb://localhost/dev-laciobot');
+mongoose.Promise = global.Promise;
 
-function insertData(c,price,size,longitude,latitude,property_type,callback){
-    db.serialize(function() {
-        var stmt = db.prepare("INSERT INTO casas VALUES (?,?,?,?,?,?)");
-        stmt.run(c,price,size,longitude,latitude,property_type,function(){
-            callback();
-        });
-    });
-}
-
-function peticion(url,str,i,c){
+/**
+* Realiza petición HTTP
+*/
+const doRequest = async (url) => {
+  return new Promise(function (resolve, reject) {
+    console.log("lanzando peticion")
     request({
         url: url,
         headers: {
@@ -35,44 +31,46 @@ function peticion(url,str,i,c){
         },
         port: 80,
         json: true
-        }, function (error, response,body) { 
-        if (!error) {
-            var sum=0,medias=0;
-            var respuesta=body.response;
-            var fin;
-            if(respuesta){
-                var resp=respuesta.listings;
-                    if(resp && resp.length>1){
-                        resp.forEach(function(item,next){
+        }, function (error, res, body) {
+      if (!error && res.statusCode == 200) {
+        resolve(body);
+      } else {
+        reject(error);
+      }
+    });
+  });
+}
+
+const start = async () => {
+    try{
+        for (let file of places) {
+            const escaped_str = str.escape(file);
+            console.log("un sitio ",escaped_str);
+            let cpaginacion = 0;
+            do{
+                const body = await doRequest("http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page="+cpaginacion+"&place_name="+escaped_str+"&pretty=1&number_of_results=50&bedroom_min=1&bedroom_max=30");
+                let sum=0,medias=0;
+                let respuesta=body.response;
+                let fin;
+                if(respuesta){
+                    var resp=respuesta.listings;
+                    for(let item of resp){
                         var remaining = resp.length;
                         if(item.size>0 && item.price){
-                            insertData(c,item.price,item.latitude,item.longitude,item.size,item.listing_type,function(){
-                                if (!--remaining){
-                                    next();
-                                }
-                            });
+                            let tmpP = new House({price: item.price,latitude: item.latitude, longitude:item.longitude});
+                            await tmpP.save();
+                            console.log("guardado sitio de ",escaped_str+" en mongodb")
                         }
-                    
-                });
-                    c++;
-                    paginar(str,i,c,false,cambio);
+                    }         
                 }
-                else{
-                    console.log("NO RESP");
-                    paginar(str,i,c,true,cambio);
-                }
-              
-            }
-            else{
-                console.log("no hay datos");
-            }
+                cpaginacion+=1;
+                console.log("una pagina ",cpaginacion+" del sitio ",escaped_str);
+            }while(resp && resp.length>1)   
         }
-        else{
-                console.log("error!!!!!!! ->"+error+ " volviendo a hacer la peticion "+c);
-                paginar(str,i,c,true,cambio);
-            }
-
-        });
+    } catch(err){
+        console.error("error! ",err);
+        throw err;
+    }
 }
 
 function handleFile(file,callback){
@@ -90,54 +88,6 @@ function handleFile(file,callback){
     });
 }
 
-function procesa(i){
-    switch(cambio){
-    case false:
-        if(i<places.length){
-            var item=places[i];
-            var escaped_str = require('querystring').escape(item);
-            console.log("un sitio: "+escaped_str);
-            var err=false;
-            var index=1;
-            paginar(escaped_str,i, cpaginacion,cambio);
-        }
-        else{
-            console.log("lugares en venta terminados");
-            cambio=true;
-            procesa(0);
-        }
-        break;
-    case true:
-        if(i<places.length){
-            var item=places[i];
-            var escaped_str = require('querystring').escape(item);
-            console.log("un sitio para comprobar tipo RENT: "+escaped_str);
-            paginar(escaped_str,i, cpaginacion,false,cambio);
-        }
-        else{
-            console.log("lugares en alquiler terminados");
-        }
-        break;
-    } 
-}
-
-function paginar(escaped_str,i, cpaginacion,error,cambio){
-
-    if(!cambio)
-        var url = "http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page="+cpaginacion+"&place_name="+escaped_str+"&pretty=1&number_of_results=50&bedroom_min=1&bedroom_max=30";
-    else
-        var url = "http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=rent&page="+cpaginacion+"&place_name="+escaped_str+"&pretty=1&number_of_results=50";
-    
-    if(cpaginacion==340 || error){
-        console.log("terminado sitio: "+escaped_str+" paginas: "+cpaginacion);
-        i++;
-        procesa(i);
-    }else{
-        peticion(url, escaped_str,i, cpaginacion);
-    }
-}
-
-handleFile('places.txt',function(){
-    index=0;
-    procesa(index);
+handleFile('places.txt',async function(){
+    start();
 });
