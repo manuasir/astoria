@@ -13,8 +13,8 @@ let House = require('./models/houses');
 let places=[];
 
 // conexión con DB
-mongoose.connect('mongodb://manuasir:mongodb@ds147072.mlab.com:47072/heroku_mctx4f0c',{useMongoClient:true});
-//mongoose.connect('mongodb://localhost/dev-laciobot');
+//mongoose.connect('mongodb://manuasir:mongodb@ds147072.mlab.com:47072/heroku_mctx4f0c',{useMongoClient:true});
+mongoose.connect('mongodb://localhost/houses');
 mongoose.Promise = global.Promise;
 
 /**
@@ -59,7 +59,6 @@ const start = async () => {
                         if(item.size>0 && item.price){
                             let tmpP = new House({price: item.price,latitude: item.latitude, longitude:item.longitude});
                             await tmpP.save();
-                            console.log("guardado sitio de ",escaped_str+" en mongodb")
                         }
                     }         
                 }

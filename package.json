@@ -21,5 +21,9 @@
     "async": "^2.5.0",
     "line-by-line": "^0.1.5",
     "mongoose": "^4.11.10",
-    "request": "^2.81.0"  }
+    "request": "^2.81.0"
+  },
+  "devDependencies": {
+    "jshint": "^2.9.5"
+  }
 }
