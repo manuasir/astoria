@@ -6,7 +6,6 @@
 const request = require("request");
 const LineByLineReader = require('line-by-line');
 const mongoose = require('mongoose');
-const async = require('async');
 const str = require('querystring');
 let House = require('./models/houses');
 // Variables globales:
@@ -43,11 +42,38 @@ const doRequest = async (url) => {
 
 const start = async () => {
     try{
-        for (let file of places) {
-            const escaped_str = str.escape(file);
+        for (let place of places) {
+            const escaped_str = str.escape(place);
             console.log("un sitio ",escaped_str);
             let cpaginacion = 0;
-            do{
+
+            const body = await doRequest(`http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page=0&place_name=${escaped_str}&pretty=1&number_of_results=50&bedroom_min=1&bedroom_max=30`);
+            let totalPages=body.response.total_pages;
+
+            let requests = [];
+            for (let i = 1; i < totalPages+1 ; i++) {
+               let url = `http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page=${i}&place_name=${escaped_str}&pretty=1&number_of_results=50&bedroom_min=1&bedroom_max=30`;
+               requests.push(doRequest(url));
+               let results = await Promise.all(requests)
+               if(results){
+                    for (let j = 0; j < results.length; j++) {
+                        if(results[j] && results[j].response && results[j].response.listings){
+                            var resp=results[j].response.listings;
+                            let saves = [];
+                            for(let item of resp){
+                                var remaining = resp.length;
+                                if(item.size>0 && item.price){
+                                    let tmpP = new House({price: item.price,latitude: item.latitude, longitude:item.longitude});
+                                    saves.push(tmpP.save());
+                                }
+                            }
+                            await Promise.all(saves)           
+                        }
+                    }
+               }   
+            }
+
+            /*do{
                 const body = await doRequest("http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page="+cpaginacion+"&place_name="+escaped_str+"&pretty=1&number_of_results=50&bedroom_min=1&bedroom_max=30");
                 let sum=0,medias=0;
                 let respuesta=body.response;
@@ -64,7 +90,7 @@ const start = async () => {
                 }
                 cpaginacion+=1;
                 console.log("una pagina ",cpaginacion+" del sitio ",escaped_str);
-            }while(resp && resp.length>1)   
+            }while(resp && resp.length>1)  */ 
         }
     } catch(err){
         console.error("error! ",err);
