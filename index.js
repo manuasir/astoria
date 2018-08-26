@@ -7,6 +7,7 @@ let House = require('./models/houses');
 
 // Variables globales:
 let places = [];
+let count_places = 0;
 
 // conexión con DB
 //mongoose.connect('mongodb://manuasir:mongodb@ds147072.mlab.com:47072/heroku_mctx4f0c',{useMongoClient:true});
@@ -18,7 +19,8 @@ mongoose.Promise = global.Promise;
 */
 const doRequest = async (url) => {
     return new Promise(function (resolve, reject) {
-        console.log("lanzando peticion")
+        count_places = count_places + 1 ;
+        console.log("lanzando peticion a " + count_places)
         request({
             url: url,
             headers: {
@@ -55,12 +57,14 @@ const start = async () => {
                 if (results) {
                     for (let j = 0; j < results.length; j++) {
                         if (results[j] && results[j].response && results[j].response.listings) {
+                            var city = results[j].request.location;
                             var resp = results[j].response.listings;
                             let saves = [];
                             for (let item of resp) {
                                 var remaining = resp.length;
                                 if (item.size > 0 && item.price) {
                                     let tmpP = new House({
+                                        location: city,
                                         bathroom_number: item.bathroom_number,
                                         bedroom_number: item.bedroom_number,
                                         car_spaces: item.car_spaces,

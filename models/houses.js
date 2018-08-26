@@ -2,6 +2,9 @@ const mongoose   = require('mongoose');
 const Schema     = mongoose.Schema;
 
 let houseSchema = new Schema({
+  location:{
+    type    : String,
+  },
   bathroom_number:{
     type    : Number,
   },
