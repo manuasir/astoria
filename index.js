@@ -10,13 +10,10 @@ let places = [];
 let count_places = 0;
 
 // conexión con DB
-//mongoose.connect('mongodb://manuasir:mongodb@ds147072.mlab.com:47072/heroku_mctx4f0c',{useMongoClient:true});
 mongoose.connect('mongodb://localhost/houses');
 mongoose.Promise = global.Promise;
 
-/**
-* Realiza petición HTTP
-*/
+// Realiza petición HTTP
 const doRequest = async (url) => {
     return new Promise(function (resolve, reject) {
         count_places = count_places + 1 ;
@@ -130,5 +127,10 @@ function handleFile(file, callback) {
 }
 
 handleFile('places.txt', async function () {
-    start();
+    try{
+        start();
+    } catch (er) {
+        console.error("error! ", er);
+        throw er;
+    }
 });
