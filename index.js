@@ -7,7 +7,7 @@ let House = require('./models/houses');
 
 // Variables globales:
 let places = [];
-let count_places = 0;
+let peticion = 0;
 
 // conexión con DB
 mongoose.connect('mongodb://localhost/houses');
@@ -16,8 +16,8 @@ mongoose.Promise = global.Promise;
 // Realiza petición HTTP
 const doRequest = async (url) => {
     return new Promise(function (resolve, reject) {
-        count_places = count_places + 1 ;
-        console.log("lanzando peticion a " + count_places)
+        peticion = peticion + 1 ;
+        console.log("Peticion numero : " + peticion)
         request({
             url: url,
             headers: {
@@ -29,7 +29,8 @@ const doRequest = async (url) => {
         }, function (error, res, body) {
             if (!error && res.statusCode == 200) {
                 resolve(body);
-            } else {
+            } else{
+                console.log("Consulta fallida a : " + url)
                 reject(error);
             }
         });
@@ -40,9 +41,9 @@ const start = async () => {
     try {
         for (let place of places) {
             const escaped_str = str.escape(place);
-            console.log("un sitio ", escaped_str);
-            let cpaginacion = 0;
-
+            console.log(escaped_str);
+            
+            //Paginacion
             const body = await doRequest(`http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page=0&place_name=${escaped_str}&pretty=1&number_of_results=50&bedroom_min=1&bedroom_max=30`);
             let totalPages = body.response.total_pages;
 
