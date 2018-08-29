@@ -7,18 +7,17 @@ let House = require('./models/houses');
 
 // Variables globales:
 let places = [];
+let peticion = 0;
 
 // conexión con DB
-//mongoose.connect('mongodb://manuasir:mongodb@ds147072.mlab.com:47072/heroku_mctx4f0c',{useMongoClient:true});
 mongoose.connect('mongodb://localhost/houses');
 mongoose.Promise = global.Promise;
 
-/**
-* Realiza petición HTTP
-*/
+// Realiza petición HTTP
 const doRequest = async (url) => {
     return new Promise(function (resolve, reject) {
-        console.log("lanzando peticion")
+        peticion = peticion + 1 ;
+        console.log("Peticion numero : " + peticion)
         request({
             url: url,
             headers: {
@@ -30,7 +29,8 @@ const doRequest = async (url) => {
         }, function (error, res, body) {
             if (!error && res.statusCode == 200) {
                 resolve(body);
-            } else {
+            } else{
+                console.log("Consulta fallida a : " + url)
                 reject(error);
             }
         });
@@ -41,9 +41,9 @@ const start = async () => {
     try {
         for (let place of places) {
             const escaped_str = str.escape(place);
-            console.log("un sitio ", escaped_str);
-            let cpaginacion = 0;
-
+            console.log(escaped_str);
+            
+            //Paginacion
             const body = await doRequest(`http://api.nestoria.es/api?action=search_listings&country=es&encoding=json&listing_type=buy&page=0&place_name=${escaped_str}&pretty=1&number_of_results=50&bedroom_min=1&bedroom_max=30`);
             let totalPages = body.response.total_pages;
 
@@ -55,12 +55,14 @@ const start = async () => {
                 if (results) {
                     for (let j = 0; j < results.length; j++) {
                         if (results[j] && results[j].response && results[j].response.listings) {
+                            var city = results[j].request.location;
                             var resp = results[j].response.listings;
                             let saves = [];
                             for (let item of resp) {
                                 var remaining = resp.length;
                                 if (item.size > 0 && item.price) {
                                     let tmpP = new House({
+                                        location: city,
                                         bathroom_number: item.bathroom_number,
                                         bedroom_number: item.bedroom_number,
                                         car_spaces: item.car_spaces,
@@ -126,5 +128,10 @@ function handleFile(file, callback) {
 }
 
 handleFile('places.txt', async function () {
-    start();
+    try{
+        start();
+    } catch (er) {
+        console.error("error! ", er);
+        throw er;
+    }
 });
