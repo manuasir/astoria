@@ -2,6 +2,7 @@
 const request = require("request");
 const LineByLineReader = require('line-by-line');
 const mongoose = require('mongoose');
+mongoose.set('useCreateIndex', true)
 const str = require('querystring');
 let House = require('./models/houses');
 
@@ -10,7 +11,8 @@ let places = [];
 let peticion = 0;
 
 // conexión con DB
-mongoose.connect('mongodb://localhost/houses');
+mongoose.connect('mongodb://astoriadb:27017/houses', { useMongoClient: true });
+
 mongoose.Promise = global.Promise;
 
 // Realiza petición HTTP
